@@ -22,7 +22,7 @@ const dir: string = join(homedir(), '.config', 'kab'),
     path: string = join(dir, 'config.json');
 
 const load = async (): Promise<void> => {
-    return new Promise(resolve => {
+    return new Promise((resolve, reject) => {
         if (loaded) return resolve();
 
         stat(path, err => {
@@ -32,12 +32,12 @@ const load = async (): Promise<void> => {
             }
 
             readFile(path, (err, data) => {
-                if (err) return resolve();
+                if (err) return reject();
 
                 try {
                     config = Object.assign(config, JSON.parse(data.toString()));
                     loaded = true;
-                } catch (e) { return resolve() }
+                } catch (e) { return reject() }
 
                 resolve();
             });

@@ -7,7 +7,6 @@ import { config } from './options';
 
 /**
  * HMAC-sha512 of (uri path + sha256(nonce + post data)) and base64 decoded secret api key
- *
  * https://docs.kraken.com/rest/#section/Authentication/Headers-and-Signature
  */
 const signature = (path: string, data: string, nonce: number): string => {
@@ -19,21 +18,30 @@ const signature = (path: string, data: string, nonce: number): string => {
 const http: AxiosInstance = axios.create({
     baseURL: 'https://api.kraken.com',
     timeout: 1000,
-    headers: {
-        'User-Agent': config.http.user_agent,
-        'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8',
-        'API-Key': config.api.key,
-    },
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=utf-8' },
 });
 
-http.interceptors.request.use((aconfig: AxiosRequestConfig) => {
-    let nonce = (new Date()).getTime();
+http.interceptors.request.use((aconfig: AxiosRequestConfig): AxiosRequestConfig => {
+    let url: string = aconfig.url as string;
 
-    aconfig.data = stringify({ nonce, ...aconfig.data });
+    if (url.indexOf('/public/') > 0) {
+        aconfig.method = 'GET';
+        aconfig.params = aconfig.data;
+    } else {
+        let nonce = (new Date()).getTime();
+        aconfig.data = stringify({ nonce, ...aconfig.data });
+
+        aconfig.headers = {
+            ...aconfig.headers,
+            'API-Key': config.api.key,
+            'API-Sign': signature(aconfig.url as string, aconfig.data, nonce),
+        };
+    }
+
     aconfig.headers = {
         ...aconfig.headers,
-        'API-Sign': signature(aconfig.url as string, aconfig.data, nonce),
-    };
+        'User-Agent': config.http.user_agent,
+    }
 
     return aconfig;
 });
@@ -42,16 +50,12 @@ http.interceptors.response.use(
     response => {
         if (response.data.error.length > 0) {
             let r = response.request as ClientRequest;
-
-            return Promise.reject(
-                `> ${r.method} | ${r.protocol}//${r.host}${r.path}\n` +
-                `error: ${errorDescription(response.data.error)}`
-            );
+            return Promise.reject(`> ${r.method} | ${r.protocol}//${r.host}${r.path}\nerror: ${errorDescription(response.data.error)}`);
         }
 
         return response;
     },
-    error => Promise.reject(error.message),
+    (error: Error) => { Promise.reject(error); },
 );
 
 export { http };

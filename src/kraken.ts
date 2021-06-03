@@ -1,9 +1,7 @@
 import { colors } from "./colors";
 import { http } from "./http";
 
-interface LooseErrorObject {
-    [key: string]: string
-}
+interface LooseErrorObject { [key: string]: string }
 
 const errors: LooseErrorObject = {
     "EAPI:Invalid key": "An invalid API-Key header was supplied (see Authentication section)",
@@ -29,36 +27,16 @@ const errors: LooseErrorObject = {
 const errorDescription = (error: string): string => {
     let message = error in errors ? `${errors[error]} (${error})` : error;
     message = `${colors.red}${message}${colors.white}`;
-    message += `\nhttps://www.google.com/search?q=${encodeURI(`site:https://support.kraken.com "${error}"`)}`;
-
-    return message;
+    return message += `\nhttps://www.google.com/search?q=${encodeURI(`site:https://support.kraken.com "${error}"`)}`;
 }
 
 const fetch = (uri: string, data: object = {}): Promise<any> => {
     return new Promise(async (resolve, reject) => {
-        await http.post(uri, data)
-            .then(value => { resolve(value.data) })
-            .catch(reason => { reject(reason) });
+        await http.post(uri, data).then(value => { resolve(value.data) }).catch(reason => { reject(reason) });
     });
 }
 
-interface iBalance {
-    ZEUR: string,
-    XXBT: string,
-    XXDG: string,
-    XETH: string,
-    BCH: string,
-    ADA: string,
-    QTUM: string,
-    XTZ: string,
-    'XTZ.S': string,
-    TRX: string,
-    KAVA: string,
-    OXT: string,
-    CRV: string,
-    'KAVA.S': string,
-    'ADA.S': string,
-}
+interface iBalance { [key: string]: string }
 
 /**
  * Get Account Balance
@@ -67,9 +45,7 @@ interface iBalance {
  */
 const balance = (): Promise<iBalance> => {
     return new Promise(async (resolve, reject) => {
-        await fetch('/0/private/Balance')
-            .then(value => { resolve(value.result) })
-            .catch(reason => { reject(reason) });
+        await fetch('/0/private/Balance').then(value => { resolve(value.result) }).catch(reason => { reject(reason) });
     });
 }
 
@@ -94,9 +70,7 @@ interface iTradeBalance {
     ml: string,
 }
 
-interface iAsset {
-    asset: 'EUR' | 'USD',
-}
+interface iAsset { asset: string }
 
 /**
  * Get Trade Balance
@@ -105,14 +79,177 @@ interface iAsset {
  */
 const tradeBalance = (data: iAsset = { asset: 'EUR' }): Promise<iTradeBalance> => {
     return new Promise(async (resolve, reject) => {
-        await fetch('/0/private/TradeBalance', data)
-            .then(value => { resolve(value.result) })
+        await fetch('/0/private/TradeBalance', data).then(value => { resolve(value.result) }).catch(reason => { reject(reason) });
+    });
+}
+
+interface iTradeHistory {
+    trades: {
+        [key: string]: {
+            /** Order responsible for execution of trade */
+            ordertxid: string,
+            /** Asset pair */
+            pair: string,
+            /** Unix timestamp of trade */
+            time: number,
+            /** Type of order (buy/sell) */
+            type: string,
+            /** Order type */
+            ordertype: string,
+            /** Average price order was executed at (quote currency) */
+            price: string,
+            /** Total cost of order (quote currency) */
+            cost: string,
+            /** Total fee (quote currency) */
+            fee: string,
+            /** Volume (base currency) */
+            vol: string,
+            /** Initial margin (quote currency) */
+            margin: string,
+            /**
+             * Comma delimited list of miscellaneous info
+             *   - _closing_, Trade closes all or part of a position
+             */
+            misc: string,
+            /**
+             * Position status (open/closed)
+             *
+             * _Only present if trade opened a position_
+             */
+            posstatus: string,
+            /**
+             * Average price of closed portion of position (quote currency)
+             *
+             * _Only present if trade opened a position_
+             */
+            cprice: any,
+            /**
+             * Total cost of closed portion of position (quote currency)
+             *
+             * _Only present if trade opened a position_
+             */
+            ccost: any,
+            /**
+             * Total fee of closed portion of position (quote currency)
+             *
+             * _Only present if trade opened a position_
+             */
+            cfee: any,
+            /**
+             * Total fee of closed portion of position (quote currency)
+             *
+             * _Only present if trade opened a position_
+             */
+            cvol: any,
+            /**
+             * Total margin freed in closed portion of position (quote currency)
+             *
+             * _Only present if trade opened a position_
+             */
+            cmargin: any,
+            /**
+             * Net profit/loss of closed portion of position (quote currency, quote currency scale)
+             *
+             * _Only present if trade opened a position_
+             */
+            net: any,
+            /**
+             * List of closing trades for position (if available)
+             *
+             * _Only present if trade opened a position_
+             */
+            trades: string[],
+        },
+    },
+}
+
+interface iTradeHistoryData {
+    /** Type of trade */
+    type?: 'all' | 'any position' | 'closed position' | 'closing position' | 'no position',
+    /** Whether or not to include trades related to position in output */
+    trades?: boolean,
+    /** Starting unix timestamp or trade tx ID of results (exclusive) */
+    start?: number,
+    /** Ending unix timestamp or trade tx ID of results (inclusive) */
+    end?: number,
+    /** Result offset for pagination */
+    ofs?: number,
+}
+
+interface iTrade {
+    /** Asset pair */
+    pair: string,
+    /** Unix timestamp of trade */
+    time: Date,
+    /** Type of order (buy/sell) */
+    type: string,
+    /** Average price order was executed at (quote currency) */
+    price: number,
+    /** Total cost of order (quote currency) */
+    cost: number,
+    /** Total fee (quote currency) */
+    fee: number,
+    /** Volume (base currency) */
+    vol: number,
+    /** Initial margin (quote currency) */
+    margin: number,
+}
+
+const tradesHistory = (data: iTradeHistoryData = {}): Promise<iTrade[]> => {
+    return new Promise((resolve, reject) => {
+        fetch('/0/private/TradesHistory', data)
+            .then(value => {
+                let tradeList: iTrade[] = [];
+                Object.values((value.result as iTradeHistory).trades).map(trade => {
+                    tradeList.push({
+                        pair: trade.pair,
+                        time: new Date(trade.time * 1000),
+                        type: trade.type,
+                        price: parseFloat(trade.price),
+                        cost: parseFloat(trade.cost),
+                        fee: parseFloat(trade.fee),
+                        vol: parseFloat(trade.vol),
+                        margin: parseFloat(trade.margin),
+                    });
+                });
+
+                resolve(tradeList);
+            })
             .catch(reason => { reject(reason) });
     });
 }
 
-export {
-    errorDescription,
-    balance,
-    tradeBalance,
-};
+interface iTickerQueryParameters {
+    pair: string,
+}
+
+interface iTickerResponseScheme {
+    [ke: string]: {
+        /** Ask [price, whole lot volume, lot volume] */
+        a: string[],
+        /** Bid [price, whole lot volume, lot volume] */
+        b: string[],
+        /** Last trade closed [price, lot volume] */
+        c: string[],
+        /** Volume [today, last 24 hours] */
+        v: string[],
+        /** Volume weighted average price [today, last 24 hours] */
+        p: string[],
+        /** Number of trades [today, last 24 hours] */
+        t: string[],
+        /** Low [today, last 24 hours] */
+        l: string[],
+        /** High [today, last 24 hours] */
+        h: string[],
+        /** Today's opening price */
+        o: string,
+    },
+}
+
+const tickerInformation = (data: iTickerQueryParameters): Promise<iTickerResponseScheme> => {
+    return new Promise((resolve, reject) => {
+        fetch('/0/public/Ticker', data).then(value => { resolve(value.result) }).catch(reason => { reject(reason) });
+    });
+}
+
+export { errorDescription, balance, tradeBalance, tradesHistory, tickerInformation };

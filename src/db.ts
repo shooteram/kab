@@ -32,30 +32,7 @@ const seed = (): Promise<void> => {
 }
 
 const set = (): Promise<void> => {
-    return new Promise(resolve => {
-        return resolve();
-
-        // let selectsql = 'select name, value from stats where name = "nonce";',
-        //     insertsql = 'insert into stats (name, value) values ("nonce", "0n");';
-
-        // db.get(selectsql, (err, rows) => {
-        //     if (err) reject(err.message);
-
-        //     if (rows) {
-        //         nonce = new Nonce(BigInt(parseInt(rows.value)));
-        //         return resolve();
-        //     }
-
-        //     db.exec(insertsql, err => {
-        //         if (err) reject(err.message);
-
-        //         db.get(selectsql, (_, rows) => {
-        //             nonce = new Nonce(BigInt(parseInt(rows.value)));
-        //             return resolve();
-        //         });
-        //     });
-        // });
-    });
+    return new Promise(resolve => { resolve() });
 }
 
 export { init };
